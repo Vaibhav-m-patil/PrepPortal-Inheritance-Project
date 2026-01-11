@@ -26,5 +26,33 @@ router.post('/register', async (req, res) => {
         res.status(400).json({ msg: err.message });
     }
 });
+// LOGIN ROUTE
+router.post('/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        // 1. Check if user exists
+        const user = await User.findOne({ email });
+        if (!user) return res.status(400).json({ msg: "User not found" });
+
+        // 2. Check password (simple comparison for now)
+        if (password !== user.password) {
+            return res.status(400).json({ msg: "Invalid credentials" });
+        }
+
+        // 3. Return Success
+        res.json({
+            msg: "Login Successful",
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email
+            }
+        });
+
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
 module.exports = router;
