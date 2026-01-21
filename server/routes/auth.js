@@ -1,57 +1,57 @@
-const express = require('express');
-const router = express.Router();
+const router = require('express').Router();
 const User = require('../models/User');
 
-// @route   POST /auth/register
-// @desc    Register a new user
+// 1. REGISTER
 router.post('/register', async (req, res) => {
-    const { name, email, password } = req.body;
-
-    // Validation
-    if (!name || !email || !password) {
-        return res.status(400).json({ msg: "Please enter all fields" });
-    }
-
     try {
-        // Check for existing user
-        const existingUser = await User.findOne({ email });
-        if (existingUser) throw Error('User already exists');
+        const existingUser = await User.findOne({ email: req.body.email });
+        if (existingUser) return res.status(400).json({ msg: "Email already exists!" });
 
-        // Create new user
-        const newUser = new User({ name, email, password });
-        const savedUser = await newUser.save();
+        const newUser = new User({
+            name: req.body.name,
+            email: req.body.email,
+            password: req.body.password, 
+        });
 
-        res.json({ msg: "Registration Successful", user: savedUser });
-    } catch (err) {
-        res.status(400).json({ msg: err.message });
-    }
-});
-// LOGIN ROUTE
-router.post('/login', async (req, res) => {
-    try {
-        const { email, password } = req.body;
-
-        // 1. Check if user exists
-        const user = await User.findOne({ email });
-        if (!user) return res.status(400).json({ msg: "User not found" });
-
-        // 2. Check password (simple comparison for now)
-        if (password !== user.password) {
-            return res.status(400).json({ msg: "Invalid credentials" });
-        }
-
-        // 3. Return Success
-        res.json({
-            msg: "Login Successful",
-            user: {
-                id: user._id,
-                name: user.name,
-                email: user.email
-            }
+        const user = await newUser.save();
+        
+        // Manual Response to ensure ID is sent
+        res.status(200).json({
+            _id: user._id,
+            name: user.name,
+            email: user.email
         });
 
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json(err);
+    }
+});
+
+// 2. LOGIN (The Fix is Here)
+router.post('/login', async (req, res) => {
+    try {
+        const user = await User.findOne({ email: req.body.email });
+        if (!user) return res.status(404).json({ msg: "User not found" });
+
+        if (user.password !== req.body.password) {
+            return res.status(400).json({ msg: "Wrong password" });
+        }
+
+        // FORCE SEND THE ID explicitly
+        res.status(200).json({ 
+            user: {
+                _id: user._id,       // <--- GUARANTEED ID
+                name: user.name,
+                email: user.email,
+                bio: user.bio,
+                profilePic: user.profilePic,
+                resume: user.resume,
+                roadmap: user.roadmap
+            } 
+        });
+
+    } catch (err) {
+        res.status(500).json(err);
     }
 });
 
